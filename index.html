@@ -55,8 +55,7 @@
     <p>
       It uses the MediaRecorder API to record audio, and the
       <code>audio/webm</code> format for output. The audio is encoded using
-      <code>64kbps</code> Opus encoding. The recording is limited to a maximum
-      of 8MB (about 10 seconds at 64kbps) to avoid using too much data.
+      <code>64kbps</code> Opus encoding to avoid using too much data.
     </p>
     <p>
       The audio is recorded using the <code>getUserMedia</code> API. This
@@ -71,6 +70,7 @@
       This module demonstrates the ability to capture up to 15 minutes of audio
       in a single Bitcoin SV transaction.
     </p>
+    <p id="visualizeChunks"></p>
     <button id="startBtn">Start Recording</button>
     <button id="stopBtn" disabled>Stop Recording</button>
     <p id="warning">Approaching 8MB limit...</p>
@@ -81,6 +81,7 @@
       const stopBtn = document.getElementById("stopBtn");
       const warningText = document.getElementById("warning");
       const downloadLink = document.getElementById("downloadLink");
+      let visualizeChunks = document.getElementById("visualizeChunks");
       let mediaRecorder;
       let audioChunks = [];
       let audioSize = 0;
@@ -109,9 +110,9 @@
 
               mediaRecorder.addEventListener("dataavailable", (event) => {
                 if (audioSize < maxAudioSize) {
+                  document.getElementById("visualizeChunks").innerHTML = "";
                   audioChunks.push(event.data);
                   audioSize += event.data.size;
-
                   if (audioSize >= warningThreshold) {
                     warningText.style.display = "block";
                   }
