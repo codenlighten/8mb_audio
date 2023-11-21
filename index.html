@@ -1,0 +1,154 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <title>Audio Recorder</title>
+    <style>
+      body {
+        font-family: sans-serif;
+      }
+
+      #warning {
+        color: red;
+        display: none;
+      }
+
+      #downloadLink {
+        display: none;
+      }
+
+      h1 {
+        margin-bottom: 0;
+      }
+      p {
+        margin-top: 0;
+      }
+
+      button {
+        margin: 10px;
+        padding: 10px;
+        font-size: 16px;
+      }
+
+      button:disabled {
+        opacity: 0.5;
+      }
+
+      button:disabled:hover {
+        cursor: not-allowed;
+      }
+
+      button:hover {
+        cursor: pointer;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>
+      Audio Recorder - Perfect for fitting into a BSV Transaction UTXO Under
+      10mb
+    </h1>
+    <p>
+      This demo records audio for up to 10 seconds and then plays it back for
+      you.
+    </p>
+    <p>
+      It uses the MediaRecorder API to record audio, and the
+      <code>audio/webm</code> format for output. The audio is encoded using
+      <code>64kbps</code> Opus encoding. The recording is limited to a maximum
+      of 8MB (about 10 seconds at 64kbps) to avoid using too much data.
+    </p>
+    <p>
+      The audio is recorded using the <code>getUserMedia</code> API. This
+      requires a secure connection (HTTPS), so you will need to run this demo on
+      a secure origin, or you can test it on{" "}
+      <a href="https://webaudiodemos.appspot.com/">this page</a>.
+    </p>
+    <p>
+      The audio is played back using the <code>Audio</code> API. This is
+      supported in all modern browsers.
+    </p>
+
+    <button id="startBtn">Start Recording</button>
+    <button id="stopBtn" disabled>Stop Recording</button>
+    <p id="warning">Approaching 8MB limit...</p>
+    <a id="downloadLink" style="display: none">Download Recording</a>
+
+    <script>
+      const startBtn = document.getElementById("startBtn");
+      const stopBtn = document.getElementById("stopBtn");
+      const warningText = document.getElementById("warning");
+      const downloadLink = document.getElementById("downloadLink");
+      let mediaRecorder;
+      let audioChunks = [];
+      let audioSize = 0;
+      const maxAudioSize = 8 * 1024 * 1024; // 8MB
+      const warningThreshold = maxAudioSize - (1024 * 1024 * 10) / 8; // 10 seconds before 8MB at 64kbps
+
+      startBtn.addEventListener("click", () => {
+        if (!navigator.mediaDevices || !window.MediaRecorder) {
+          alert(
+            "Your browser does not support the required MediaRecorder API."
+          );
+        } else {
+          navigator.mediaDevices
+            .getUserMedia({ audio: true })
+            .then((stream) => {
+              const options = {
+                mimeType: "audio/webm",
+                audioBitsPerSecond: 64000, // 64kbps
+              };
+
+              mediaRecorder = new MediaRecorder(stream, options);
+              audioChunks = [];
+              audioSize = 0;
+              warningText.style.display = "none";
+              downloadLink.style.display = "none";
+
+              mediaRecorder.addEventListener("dataavailable", (event) => {
+                if (audioSize < maxAudioSize) {
+                  audioChunks.push(event.data);
+                  audioSize += event.data.size;
+
+                  if (audioSize >= warningThreshold) {
+                    warningText.style.display = "block";
+                  }
+                } else {
+                  mediaRecorder.stop();
+                  startBtn.disabled = false;
+                  stopBtn.disabled = true;
+                }
+              });
+
+              mediaRecorder.addEventListener("stop", () => {
+                const audioBlob = new Blob(audioChunks, { type: "audio/webm" });
+                const audioUrl = URL.createObjectURL(audioBlob);
+                downloadLink.href = audioUrl;
+                downloadLink.download = "audio.webm";
+                downloadLink.textContent = "Download Recording";
+                downloadLink.style.display = "block";
+
+                const audio = new Audio(audioUrl);
+                audio.play();
+                startBtn.disabled = false;
+                stopBtn.disabled = true;
+              });
+
+              mediaRecorder.start();
+              startBtn.disabled = true;
+              stopBtn.disabled = false;
+            })
+            .catch((error) => {
+              console.error("Error accessing the microphone:", error);
+            });
+        }
+      });
+
+      stopBtn.addEventListener("click", () => {
+        if (mediaRecorder && mediaRecorder.state !== "inactive") {
+          mediaRecorder.stop();
+        }
+      });
+    </script>
+  </body>
+</html>
